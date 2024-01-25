@@ -1,0 +1,3 @@
+# Shared memory speed explanation
+The main reasons why the block shared memory may be faster than using the gloabal. 
+For one, "the shared memory is expected to a low-latency memory near processor core" (https://docs.nvidia.com/cuda/pdf/CUDA_C_Programming_Guide.pdf). For example according to NVIDIA the latency in share memory is 100x less than global mmemory. This also lends to ways to program faster in parallel such as doing parallel reductions. (https://developer.nvidia.com/blog/using-shared-memory-cuda-cc/)
