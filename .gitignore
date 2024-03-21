@@ -7,6 +7,10 @@
 *.obj
 *.elf
 
+# Office docs
+*.docx
+*.doc
+
 # Linker output
 *.ilk
 *.map
@@ -52,7 +56,7 @@ Mkfile.old
 dkms.conf
 **/*.class
 **/target/
-
+**/.ipynb_checkpoints
 *.png
 HDP*
 *.zip
