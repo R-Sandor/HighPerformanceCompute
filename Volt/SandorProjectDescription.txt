@@ -1,0 +1,7 @@
+﻿Project Title: Project Volt - CVE Similarity Engine  
+
+Project Objective:  
+	Create an Apache Spark application that can aid cybersecurity analysts in the justification and adjudication process by applying techniques such as TF-IDF, and TF-IDF vectorization to provide search and similarity search between CVEs. 
+
+Project Description: 
+	The project utilizes the NVD (National Vulnerability Database) which consists of a dataset of over 248k Common Vulnerabilities and Exposures (CVEs) and is increasing over time, at its current size it is 1.2GB of text data. By creating a Spark application that can pre-process the dataset with tokenization, normalization, TF-IDF, and TF-IDF Vectorization it expands the capability beyond the NVD dataset to data from other applications/services such as TwistLock, Fortify, and SonarQube vulnerability reports to reuse the pipeline. The distributed capability ultimately creating an extensible framework for ML and further big data applications. Additionally, the TF-IDF vectorization can be used in document similarity search with cosine similarity which leverages the parallelization provided by Spark to compute cosine similarities. At demand this would be expensive without horizontal scaling which Spark provide.
