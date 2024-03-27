@@ -4,6 +4,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.UDFRegistration;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.api.java.UDF1;
+import org.apache.spark.sql.catalyst.expressions.Encode;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -15,10 +16,12 @@ import io.javalin.Javalin;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructType;
 import org.apache.spark.ml.feature.StopWordsRemover;
+import org.apache.hadoop.mapred.join.Parser.StrToken;
 import org.apache.spark.api.java.function.FilterFunction;
 import org.apache.spark.api.java.function.MapFunction;
 
@@ -29,49 +32,60 @@ import static org.apache.spark.sql.functions.countDistinct;
 
 public class App {
 
-  final static String parquetFile = "data/tfidf.parquet";
+  final static String cveFile = "data/tfidf.parquet";
+  final static String tokenFile = "data/tfidf.parquet";
 
   public static void main(String args[]) {
-    processCVEData();
+    // processCVEData();
     var app = Javalin.create(/* config */)
         .get("/query", ctx -> {
-          final Object[] keywords =  ctx.queryParam("query").split(",");
+          final List<String> keywords = Arrays.asList(ctx.queryParam("query").split(","));
           // Filter matching documents
           try {
             final var spark = SparkSession
-              .builder()
-              .master("local[*]")
-              .config("spark.driver.host", "127.0.0.1")
-              .config("spark.driver.bindAddress", "127.0.0.1")
-              .config("spark.sql.shuffle.partitions", 8)
-              .config("spark.default.parallelism", 8)
-              .config("spark.sql.streaming.forceDeleteTempCheckpointLocation", true)
-              .appName("volt")
-              .getOrCreate();
+                .builder()
+                .master("local[*]")
+                .config("spark.driver.host", "127.0.0.1")
+                .config("spark.driver.bindAddress", "127.0.0.1")
+                .config("spark.sql.shuffle.partitions", 8)
+                .config("spark.default.parallelism", 8)
+                .config("spark.sql.streaming.forceDeleteTempCheckpointLocation", true)
+                .appName("volt")
+                .getOrCreate();
 
-            Dataset<Row> weightedWordDocuments = spark.read().parquet(parquetFile);
+            Dataset<Row> cveDocs = spark.read().parquet(cveFile);
+            Dataset<Row> tokens = spark.read().parquet(tokenFile);
+            List<String> queryArray = Arrays.asList(ctx.queryParam("query").split(","));
 
-            Dataset<Row> matchingDocs = weightedWordDocuments
-            .where(col("token").isin(keywords));
+            // DataTypes.StringType);
+
+            Dataset<String> q = spark.createDataset(queryArray,
+                Encoders.STRING());
+            q.show();
+
+            q.join(tokens, "q('value') == tokens('token')", "inner").show();
+
+            Dataset<Row> matchingDocs = cveDocs
+                .where(col("token").isin(keywords));
 
             matchingDocs.show();
 
             // Group by specified columns and aggregate
             Dataset<Row> rankedDocs = matchingDocs
-            .groupBy("id")
-            .agg(sum("tf_idf").alias("docrankcolumn"))
-            .orderBy(col("docrankcolumn").desc());
+                .groupBy("id")
+                .agg(sum("tf_idf").alias("docrankcolumn"))
+                .orderBy(col("docrankcolumn").desc());
             rankedDocs.show();
 
             ctx.json(rankedDocs.toJSON().collectAsList());
 
             spark.stop();
-          } catch (Exception e) { 
-            e.printStackTrace(); 
+          } catch (Exception e) {
+            e.printStackTrace();
           }
         })
         .start(7070);
-    
+
   }
 
   public static void processCVEData() {
@@ -130,7 +144,7 @@ public class App {
 
       final String codec = "parquet";
 
-      tfIdfDS.write().format(codec).save(parquetFile);
+      tfIdfDS.write().format(codec).save(cveFile);
 
     } catch (Exception ex) {
       ex.printStackTrace();
