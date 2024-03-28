@@ -75,7 +75,7 @@ tasks.named('test') {
 }
 
 tasks.named('run') {
-  dependsOn('loadData')
+  dependsOn('download')
 }
 
 task download {

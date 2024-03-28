@@ -33,7 +33,7 @@ import static org.apache.spark.sql.functions.countDistinct;
 public class App {
 
   final static String cveFile = "data/tfidf.parquet";
-  final static String tokenFile = "data/tfidf.parquet";
+  final static String tokenFile = "data/tokens.parquet";
 
   public static void main(String args[]) {
     // processCVEData();
@@ -63,21 +63,29 @@ public class App {
                 Encoders.STRING());
             q.show();
 
-            q.join(tokens, "q('value') == tokens('token')", "inner").show();
+            var qTokens = q.join(tokens, q.col("value").equalTo(tokens.col("token")), "inner");
+            qTokens.show();
 
-            Dataset<Row> matchingDocs = cveDocs
-                .where(col("token").isin(keywords));
+            // If the joined is just a single token return the highest TF-IDF score.
+            // otherwise vectorize the keywords and return a th matches.
+            var tknCnt = qTokens.count();
+            if (tknCnt < 0) {
+              ctx.json("No records found with your search words");
+            } else if (tknCnt == 1) {
+              cveDocs.join(qTokens, "token", "inner").show();
+            } else {
 
-            matchingDocs.show();
+            }
 
             // Group by specified columns and aggregate
-            Dataset<Row> rankedDocs = matchingDocs
-                .groupBy("id")
-                .agg(sum("tf_idf").alias("docrankcolumn"))
-                .orderBy(col("docrankcolumn").desc());
-            rankedDocs.show();
-
-            ctx.json(rankedDocs.toJSON().collectAsList());
+            // Dataset<Row> rankedDocs = matchingDocs
+            // .groupBy("id")
+            // .agg(sum("tf_idf").alias("docrankcolumn"))
+            // .orderBy(col("docrankcolumn").desc());
+            // rankedDocs.show();
+            //
+            // ctx.json(rankedDocs.toJSON().collectAsList());
+            ctx.json("Interface in design");
 
             spark.stop();
           } catch (Exception e) {
